@@ -1,9 +1,10 @@
-const functions = require('@google-cloud/functions-framework');
-const { Firestore } = require('@google-cloud/firestore');
+const { onRequest } = require('firebase-functions/v2/https');
+const admin = require('firebase-admin');
 
-const firestore = new Firestore();
+admin.initializeApp();
+const firestore = admin.firestore();
 
-functions.http('redirect', async (req, res) => {
+exports.redirect = onRequest({ region: 'us-central1' }, async (req, res) => {
   const destination = req.query.d;
   
   if (!destination) {
@@ -26,7 +27,7 @@ functions.http('redirect', async (req, res) => {
     // Extract fbclid separately for easier reconciliation
     const fbclid = req.query.fbclid || null;
     
-    // Log click (fire and forget - don't block redirect)
+    // Log click (fire and forget)
     firestore.collection('clicks').add({
       timestamp: new Date(),
       destination: destination,
@@ -38,10 +39,7 @@ functions.http('redirect', async (req, res) => {
       utm_content: params.utm_content || null,
       utm_term: params.utm_term || null,
       userAgent: req.headers['user-agent'] || null,
-      ip: req.headers['x-forwarded-for']?.split(',')[0] || req.ip || null,
-      country: req.headers['x-appengine-country'] || null,
-      region: req.headers['x-appengine-region'] || null,
-      city: req.headers['x-appengine-city'] || null
+      ip: req.headers['x-forwarded-for']?.split(',')[0] || req.ip || null
     }).catch(err => console.error('Firestore write failed:', err));
     
     res.redirect(302, destUrl.toString());
