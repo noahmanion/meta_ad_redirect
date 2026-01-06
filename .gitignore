@@ -12,6 +12,7 @@ yarn.lock
 .firebase/
 .firebaserc
 firebase-debug.log
+.gcloudignore
 
 # Emulator data
 emulator-data/

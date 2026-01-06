@@ -5,7 +5,11 @@ admin.initializeApp();
 const firestore = admin.firestore();
 
 exports.redirect = onRequest({ region: 'us-central1' }, async (req, res) => {
-  const destination = req.query.d;
+  // Get raw query string to preserve + signs
+  const rawQuery = req.originalUrl.split('?')[1] || '';
+  const rawParams = new URLSearchParams(rawQuery);
+  
+  const destination = rawParams.get('d');
   
   if (!destination) {
     res.status(400).send('Missing destination');
@@ -16,16 +20,24 @@ exports.redirect = onRequest({ region: 'us-central1' }, async (req, res) => {
     const destUrl = new URL(destination);
     const params = {};
     
-    // Forward all params except 'd' to destination
-    for (const [key, value] of Object.entries(req.query)) {
-      if (key !== 'd') {
-        destUrl.searchParams.set(key, value);
-        params[key] = value;
+    // Parse raw query string manually to preserve + signs
+    const paramPairs = rawQuery.split('&');
+    for (const pair of paramPairs) {
+      const [key, ...valueParts] = pair.split('=');
+      const value = valueParts.join('='); // Handle values with = in them
+      
+      if (key && key !== 'd' && value !== undefined) {
+        // Decode %XX sequences but preserve + as literal +
+        const decodedKey = decodeURIComponent(key);
+        const decodedValue = decodeURIComponent(value.replace(/\+/g, '%2B'));
+        
+        destUrl.searchParams.set(decodedKey, decodedValue);
+        params[decodedKey] = decodedValue;
       }
     }
     
     // Extract fbclid separately for easier reconciliation
-    const fbclid = req.query.fbclid || null;
+    const fbclid = params.fbclid || null;
     
     // Log click (fire and forget)
     firestore.collection('clicks').add({
