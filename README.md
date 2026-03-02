@@ -41,6 +41,59 @@ If not already enabled:
 gcloud services enable firestore.googleapis.com
 ```
 
+## Connecting a Custom Domain
+
+By default, Firebase Hosting gives you a `{{PROJECT_ID}}.web.app` URL. To use a custom redirect domain:
+
+1. **Add the domain in Firebase Console**
+   - Go to **Hosting** > **Add custom domain**
+   - Enter your domain (e.g., `{{YOUR_DOMAIN}}`)
+
+2. **Update DNS records**
+   - Firebase will provide DNS records (typically A records) to add at your domain registrar
+   - If using a subdomain, add the CNAME record Firebase provides
+
+3. **Wait for SSL provisioning**
+   - Firebase automatically provisions an SSL certificate
+   - This can take a few minutes to a few hours
+
+4. **Verify the redirect works**
+   ```
+   https://{{YOUR_DOMAIN}}/{{ROUTE_PREFIX}}?d=https://example.com&utm_source=test
+   ```
+
+### How the Pieces Connect
+
+```
+Ad Platform                  Firebase Hosting              Cloud Function
+┌──────────┐    click     ┌─────────────────┐  rewrite  ┌──────────────┐
+│  Ad with  │ ──────────> │ {{YOUR_DOMAIN}} │ ───────>  │ {{FUNCTION_  │
+│  link to  │             │ /{{ROUTE_PREFIX}}│           │ NAME}}       │
+│  /{{ROUTE │             │                 │           │              │
+│  _PREFIX}}│             └─────────────────┘           │ 1. Log click │
+└──────────┘                                            │    to Firestore
+                                                        │ 2. 302 redirect
+                          ┌─────────────────┐           │    to ?d= URL│
+                          │   Destination   │ <──────── │              │
+                          │   Website       │  redirect └──────────────┘
+                          └─────────────────┘
+```
+
+- **`firebase.json`** defines the rewrite rule: requests to `/{{ROUTE_PREFIX}}` are routed to the `{{FUNCTION_NAME}}` Cloud Function
+- **The Cloud Function** (`functions/index.js`) reads the `d` query param as the destination, logs analytics to Firestore, and performs the 302 redirect
+- **Firestore** stores each click as a document in the `{{FIRESTORE_COLLECTION}}` collection
+- **The ad platform** just needs the full URL as the click-through link: `https://{{YOUR_DOMAIN}}/{{ROUTE_PREFIX}}?d=<encoded_destination>&{{CLICK_ID_PARAM}}=...`
+
+### Building Ad URLs
+
+Your ad click-through URL should follow this format:
+
+```
+https://{{YOUR_DOMAIN}}/{{ROUTE_PREFIX}}?d=<DESTINATION_URL>&utm_source={{AD_PLATFORM_SLUG}}&utm_medium=paid&utm_campaign=<CAMPAIGN_NAME>
+```
+
+The ad platform will automatically append its click ID parameter (e.g., `{{CLICK_ID_PARAM}}`), which gets captured in analytics and forwarded to the destination.
+
 ## Local Development
 
 ```bash
