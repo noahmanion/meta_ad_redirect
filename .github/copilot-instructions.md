@@ -1,7 +1,7 @@
-# Meta Ad Redirect - AI Coding Agent Instructions
+# {{PROJECT_NAME}} - AI Coding Agent Instructions
 
 ## Project Overview
-This is a Firebase-based URL redirect service with click tracking for Meta/Facebook ads. It captures click analytics (UTM parameters, fbclid, geolocation, user agent) and redirects users to destinations while preserving query parameters.
+This is a Firebase-based URL redirect service with click tracking for {{AD_PLATFORM}} ads. It captures click analytics (UTM parameters, click IDs, geolocation, user agent) and redirects users to destinations while preserving query parameters.
 
 ## Architecture
 
@@ -9,17 +9,17 @@ This is a Firebase-based URL redirect service with click tracking for Meta/Faceb
 - **Runtime**: Node.js 20
 - **Hosting**: Public static site + Cloud Functions
 - **Database**: Firestore for click analytics
-- **Function**: `redirect` HTTP function deployed at `/r` and `/r/**` endpoints
+- **Function**: `{{FUNCTION_NAME}}` HTTP function deployed at `/{{ROUTE_PREFIX}}` and `/{{ROUTE_PREFIX}}/**` endpoints
 
 ### Request Flow
-1. User clicks ad URL: `/r?d=https://destination.com&utm_source=meta&fbclid=XXX`
+1. User clicks ad URL: `/{{ROUTE_PREFIX}}?d=https://destination.com&utm_source={{AD_PLATFORM_SLUG}}&{{CLICK_ID_PARAM}}=XXX`
 2. Function validates destination URL
-3. Function logs click metadata to Firestore collection `clicks` (fire-and-forget)
+3. Function logs click metadata to Firestore collection `{{FIRESTORE_COLLECTION}}` (fire-and-forget)
 4. Function performs 302 redirect with forwarded query parameters
 
 ### Data Schema
 Click documents in Firestore contain:
-- `timestamp`, `destination`, `params` (forwarded), `fbclid`
+- `timestamp`, `destination`, `params` (forwarded), `{{CLICK_ID_PARAM}}`
 - UTM fields: `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`
 - Request metadata: `userAgent`, `ip`, `country`, `region`, `city` (from App Engine headers)
 
@@ -28,7 +28,7 @@ Click documents in Firestore contain:
 ### URL Parameter Handling
 - Destination URL passed as `d` parameter (e.g., `?d=https://example.com`)
 - All query params EXCEPT `d` are forwarded to destination via `URLSearchParams`
-- Special handling for `fbclid` - extracted separately for reconciliation (also forwarded)
+- Special handling for `{{CLICK_ID_PARAM}}` - extracted separately for reconciliation (also forwarded)
 - Non-blocking logging: Firestore writes use `.catch()` to prevent failed analytics from blocking redirects
 
 ### Error Handling
@@ -38,8 +38,8 @@ Click documents in Firestore contain:
 
 ### Firebase Configuration
 See [firebase.json](firebase.json):
-- Rewrites route `/r` and `/r/**` to Cloud Function `redirect`
-- Function region: `us-central1`
+- Rewrites route `/{{ROUTE_PREFIX}}` and `/{{ROUTE_PREFIX}}/**` to Cloud Function `{{FUNCTION_NAME}}`
+- Function region: `{{GCP_REGION}}`
 - Hosting public directory: `public/`
 
 ## Development Workflows
@@ -61,7 +61,7 @@ cd functions && npm install
 # Run function locally with emulator
 firebase emulators:start --only functions
 
-# Test: curl "http://localhost:5001/<project>/<region>/redirect?d=https://example.com&utm_source=test"
+# Test: curl "http://localhost:5001/{{PROJECT_ID}}/{{GCP_REGION}}/{{FUNCTION_NAME}}?d=https://example.com&utm_source=test"
 ```
 
 ### Deployment
@@ -94,7 +94,7 @@ gcloud services enable firestore.googleapis.com
 
 ## Common Tasks
 
-- **Add new parameter tracking**: Add field to Firestore click document in [functions/index.js](functions/index.js#L29)
+- **Add new parameter tracking**: Add field to Firestore click document in [{{FUNCTION_ENTRY_FILE}}]({{FUNCTION_ENTRY_FILE}})
 - **Change redirect logic**: Modify URL building and redirect in the try block
 - **Debug analytics**: Query Firestore console or use `firebase functions:log`
 - **Update Node version**: Modify `engines.node` in [functions/package.json](functions/package.json) and `runtime` in [firebase.json](firebase.json)
