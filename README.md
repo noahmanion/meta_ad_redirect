@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}}
+# Meta Ad Redirect
 
 A Firebase-based URL redirect service with click tracking for {{AD_PLATFORM}} ads. Captures click analytics (UTM parameters, click IDs, geolocation, user agent) and redirects users to destination URLs while preserving query parameters.
 
